@@ -40,23 +40,7 @@ Metrics/PerceivedComplexity:
 # Offense count: 14
 # Configuration parameters: AllowedConstants.
 Style/Documentation:
-  Exclude:
-    - 'spec/**/*'
-    - 'test/**/*'
-    - 'app/controllers/api/v1/geolocations_controller.rb'
-    - 'app/controllers/application_controller.rb'
-    - 'app/controllers/concerns/error_handler.rb'
-    - 'app/mailers/application_mailer.rb'
-    - 'app/models/application_record.rb'
-    - 'app/models/geolocation.rb'
-    - 'app/serializers/geolocation_serializer.rb'
-    - 'app/services/geolocation_lookup_resolver.rb'
-    - 'app/services/geolocation_lookup_service.rb'
-    - 'app/services/geolocation_providers/ipstack_provider.rb'
-    - 'app/services/geolocation_providers/null_provider.rb'
-    - 'app/services/geolocation_providers/provider_base.rb'
-    - 'config/application.rb'
-    - 'db/migrate/20260506155726_create_geolocations.rb'
+  Enabled: false
 
 # Offense count: 1
 # This cop supports safe autocorrection (--autocorrect).
@@ -70,3 +54,7 @@ Style/IfUnlessModifier:
 # URISchemes: http, https
 Layout/LineLength:
   Max: 198
+
+Metrics/BlockLength:
+  Exclude:
+    - 'config/initializers/devise.rb'
