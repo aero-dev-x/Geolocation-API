@@ -1,10 +1,34 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  mount Rswag::Ui::Engine => '/api-docs'
+  mount Rswag::Api::Engine => '/api-docs'
+  root to: redirect('/api-docs')
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
-  get "up" => "rails/health#show", as: :rails_health_check
+  scope path: '/api/v1' do
+    devise_for :users,
+               path: '',
+               path_names: {
+                 sign_in: 'users/sign_in',
+                 sign_out: 'users/sign_out',
+                 registration: 'users/sign_up'
+               },
+               controllers: {
+                 sessions: 'api/v1/users/sessions',
+                 registrations: 'api/v1/users/registrations'
+               }
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+    post 'users/refresh_token', to: 'api/v1/users/refresh_tokens#create'
+  end
+
+  namespace :api do
+    namespace :v1 do
+      resources :geolocations,
+                param: :identifier,
+                constraints: { identifier: %r{[^/]+} },
+                only: %i[index create show destroy]
+    end
+  end
+
+  get 'up' => 'rails/health#show', as: :rails_health_check
 end

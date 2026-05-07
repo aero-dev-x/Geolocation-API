@@ -1,0 +1,1009 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Geolocations API",
+    "version": "v1",
+    "description": "API documentation for geolocation lookups and JWT-based authentication."
+  },
+  "servers": [
+    {
+      "url": "http://{defaultHost}",
+      "variables": {
+        "defaultHost": {
+          "default": "localhost:3000"
+        }
+      }
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "auth_user_attributes": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT access token. Expires after 30 minutes."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Opaque refresh token used to rotate and obtain a new access token."
+          }
+        },
+        "required": [
+          "email",
+          "token",
+          "refresh_token"
+        ]
+      },
+      "user_resource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "user"
+            ]
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/auth_user_attributes"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "attributes"
+        ]
+      },
+      "user_response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/user_resource"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "sign_up_request": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "password": {
+                "type": "string"
+              },
+              "password_confirmation": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "email",
+              "password"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "sign_in_request": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "password": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "email",
+              "password"
+            ]
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "refresh_token_request": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ]
+      },
+      "optional_refresh_token_request": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "geolocation_attributes": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "country_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "country_code": {
+            "type": "string",
+            "nullable": true
+          },
+          "region_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "region_code": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "zip": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "string",
+            "nullable": true,
+            "description": "Decimal latitude serialized as a string"
+          },
+          "longitude": {
+            "type": "string",
+            "nullable": true,
+            "description": "Decimal longitude serialized as a string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "ip",
+          "provider",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "geolocation_resource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "geolocation"
+            ]
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/geolocation_attributes"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "attributes"
+        ]
+      },
+      "geolocation_response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/geolocation_resource"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "geolocations_index_response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/geolocation_resource"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "total_count": {
+                "type": "integer"
+              },
+              "page": {
+                "type": "integer"
+              },
+              "per_page": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total_count",
+              "page",
+              "per_page"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "geolocation_create_request": {
+        "type": "object",
+        "properties": {
+          "geolocation": {
+            "type": "object",
+            "properties": {
+              "ip": {
+                "type": "string",
+                "nullable": true,
+                "description": "Literal IPv4 or IPv6 address"
+              },
+              "url": {
+                "type": "string",
+                "nullable": true,
+                "description": "Hostname or website URL. Do not send a raw IP here."
+              }
+            }
+          }
+        },
+        "required": [
+          "geolocation"
+        ]
+      },
+      "error_object": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "code",
+          "title",
+          "detail"
+        ]
+      },
+      "error_response": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/error_object"
+            }
+          }
+        },
+        "required": [
+          "errors"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/users/sign_up": {
+      "post": {
+        "summary": "Registers a user",
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "signUpUser",
+        "description": "Creates a user account and returns a 30-minute JWT access token plus a refresh token.",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "user created",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Bearer JWT access token for the created user"
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "1",
+                    "type": "user",
+                    "attributes": {
+                      "email": "new@example.com",
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzNjZlMjdiNy05Y2Y5LTQ5NGYtYmE4Ni0xZjJhZDk4MGRlOTkiLCJzdWIiOiIxIiwic2NwIjoidXNlciIsImF1ZCI6bnVsbCwiaWF0IjoxNzc4MTc3NzY4LCJleHAiOjE3NzgxNzk1Njh9.K1O9xWHZ_mxNl8qSMmJqFSL8YMm_Ax2fj7ZM2JDS8a8",
+                      "refresh_token": "mjOovxNzpFPHZROlVH2DL1fqQU8rrDB7CfOrSsumalWcTCIa5zz53eNAPf8fa152"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/user_response"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation error",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "422",
+                      "code": "validation_error",
+                      "title": "Validation Error",
+                      "detail": "email has already been taken"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sign_up_request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/sign_in": {
+      "post": {
+        "summary": "Authenticates a user",
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "signInUser",
+        "description": "Authenticates an existing user and returns a 30-minute JWT access token plus a refresh token.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "authenticated",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Bearer JWT access token for the signed-in user"
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "3",
+                    "type": "user",
+                    "attributes": {
+                      "email": "login@example.com",
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIyY2NiNzIwMy03YTJkLTQ3ZDUtOWRiNC02NjkzMzFiZDEwODgiLCJzdWIiOiIzIiwic2NwIjoidXNlciIsImF1ZCI6bnVsbCwiaWF0IjoxNzc4MTc3NzY4LCJleHAiOjE3NzgxNzk1Njh9.H4LtCgmalqYEv2YyvxSnYvSnpjrhlvUKKrCW1U0IzYA",
+                      "refresh_token": "YP99yFwwx6OlAqLi2hGy9xdY5H2Qq8c8SfzqAHSGmBmRmqrPSrOrLDkSdF6LpTjO"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/user_response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid credentials",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "401",
+                      "code": "unauthorized",
+                      "title": "Unauthorized",
+                      "detail": "You need to sign in or sign up before continuing."
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sign_in_request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/refresh_token": {
+      "post": {
+        "summary": "Rotates a refresh token",
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "refreshUserToken",
+        "description": "Accepts a refresh token and returns a new 30-minute JWT access token plus a newly rotated refresh token.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "tokens refreshed",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Bearer JWT access token for the user"
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "5",
+                    "type": "user",
+                    "attributes": {
+                      "email": "refresh@example.com",
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI4YzRmNGMwZS0zYmQ4LTQwOWQtYTYyYy0xM2RlYTc2MzJhNDUiLCJzdWIiOiI1Iiwic2NwIjoidXNlciIsImF1ZCI6bnVsbCwiaWF0IjoxNzc4MTc3NzY4LCJleHAiOjE3NzgxNzk1Njh9.Ax_lSvVPnp9QWwJVbK0NyeezZ2SbgnHDiuTvcQMcsdA",
+                      "refresh_token": "IpThRfM6k-_wbuHPRFhzLkfir_Gx3XhKXxWlXyanjwjPJFk7hQUN3H7koOiKHxRM"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/user_response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "401",
+                      "code": "invalid_refresh_token",
+                      "title": "Invalid Refresh Token",
+                      "detail": "Refresh token is invalid or expired"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "missing refresh token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "400",
+                      "code": "missing_parameter",
+                      "title": "Missing Parameter",
+                      "detail": "param is missing or the value is empty: refresh_token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/refresh_token_request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/sign_out": {
+      "delete": {
+        "summary": "Revokes the current JWT",
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "signOutUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Revokes the current bearer token. If a refresh token is included, that refresh token is revoked too. The response body is empty. This endpoint currently returns 204 even when the Authorization header is omitted.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Bearer JWT token"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "signed out"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/optional_refresh_token_request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/geolocations": {
+      "get": {
+        "summary": "Lists stored geolocations",
+        "tags": [
+          "Geolocations"
+        ],
+        "operationId": "listGeolocations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Returns geolocations ordered by newest first, with pagination metadata.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Bearer JWT token"
+          },
+          {
+            "name": "page[number]",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "description": "Page number"
+          },
+          {
+            "name": "page[size]",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "description": "Page size"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "geolocations returned",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "id": "2",
+                      "type": "geolocation",
+                      "attributes": {
+                        "ip": "1.1.1.11",
+                        "url": "https://newer.example",
+                        "country_name": "United States",
+                        "country_code": "US",
+                        "region_name": "California",
+                        "region_code": "CA",
+                        "city": "Los Angeles",
+                        "zip": "90001",
+                        "latitude": "34.0655",
+                        "longitude": "-118.2405",
+                        "provider": "ipstack",
+                        "created_at": "2026-05-06T18:16:08.322Z",
+                        "updated_at": "2026-05-07T18:16:08.323Z"
+                      }
+                    }
+                  ],
+                  "meta": {
+                    "total_count": 2,
+                    "page": 1,
+                    "per_page": 1
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/geolocations_index_response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "401",
+                      "code": "unauthorized",
+                      "title": "Unauthorized",
+                      "detail": "You need to sign in or sign up before continuing."
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Creates or refreshes a geolocation",
+        "tags": [
+          "Geolocations"
+        ],
+        "operationId": "createGeolocation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "description": "Accepts exactly one of ip or url. Use ip only for literal IP addresses and url only for hostnames or website URLs. Existing records are reused by resolved IP and return 200.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Bearer JWT token"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "created from ip",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "3",
+                    "type": "geolocation",
+                    "attributes": {
+                      "ip": "64.233.180.113",
+                      "url": null,
+                      "country_name": "United States",
+                      "country_code": "US",
+                      "region_name": "California",
+                      "region_code": "CA",
+                      "city": "Mountain View",
+                      "zip": "94041",
+                      "latitude": "37.3880196",
+                      "longitude": "-122.0743103",
+                      "provider": "null",
+                      "created_at": "2026-05-07T18:16:08.355Z",
+                      "updated_at": "2026-05-07T18:16:08.355Z"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/geolocation_response"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "updated existing record",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "4",
+                    "type": "geolocation",
+                    "attributes": {
+                      "ip": "64.233.180.113",
+                      "url": null,
+                      "country_name": "United States",
+                      "country_code": "US",
+                      "region_name": "California",
+                      "region_code": "CA",
+                      "city": "Mountain View",
+                      "zip": "94041",
+                      "latitude": "37.3880196",
+                      "longitude": "-122.0743103",
+                      "provider": "null",
+                      "created_at": "2026-05-07T18:16:08.360Z",
+                      "updated_at": "2026-05-07T18:16:08.372Z"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/geolocation_response"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid url",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "422",
+                      "code": "invalid_url",
+                      "title": "Invalid URL",
+                      "detail": "Invalid URL"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "missing ip and url",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "400",
+                      "code": "missing_parameter",
+                      "title": "Missing Parameter",
+                      "detail": "param is missing or the value is empty: geolocation"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing or invalid token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "401",
+                      "code": "unauthorized",
+                      "title": "Unauthorized",
+                      "detail": "You need to sign in or sign up before continuing."
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/geolocation_create_request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/geolocations/{identifier}": {
+      "parameters": [
+        {
+          "name": "identifier",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "description": "Record identifier. Can match ip or url. URL-based values must be URL-encoded."
+        },
+        {
+          "name": "Authorization",
+          "in": "header",
+          "schema": {
+            "type": "string"
+          },
+          "required": true,
+          "description": "Bearer JWT token"
+        }
+      ],
+      "get": {
+        "summary": "Fetches a geolocation by identifier",
+        "tags": [
+          "Geolocations"
+        ],
+        "operationId": "showGeolocation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "geolocation found by url identifier",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "6",
+                    "type": "geolocation",
+                    "attributes": {
+                      "ip": "64.233.180.113",
+                      "url": "https://google.com",
+                      "country_name": "United States",
+                      "country_code": "US",
+                      "region_name": "California",
+                      "region_code": "CA",
+                      "city": "Los Angeles",
+                      "zip": "90001",
+                      "latitude": "34.0655",
+                      "longitude": "-118.2405",
+                      "provider": "ipstack",
+                      "created_at": "2026-05-07T18:16:08.413Z",
+                      "updated_at": "2026-05-07T18:16:08.413Z"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/geolocation_response"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "geolocation not found",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "404",
+                      "code": "not_found",
+                      "title": "Resource Not Found",
+                      "detail": "Couldn't find Geolocation with [WHERE (ip = 'missing' OR url = 'missing')]"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Deletes a geolocation by identifier",
+        "tags": [
+          "Geolocations"
+        ],
+        "operationId": "deleteGeolocation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "geolocation deleted by url identifier"
+          },
+          "404": {
+            "description": "geolocation not found",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "404",
+                      "code": "not_found",
+                      "title": "Resource Not Found",
+                      "detail": "Couldn't find Geolocation with [WHERE (ip = 'missing' OR url = 'missing')]"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -9,7 +9,11 @@
 
 # Ignore all environment files (except templates).
 /.env*
+!/.env.example
 !/.env*.erb
+
+# Ignore local coverage reports.
+/coverage/
 
 # Ignore all logfiles and tempfiles.
 /log/*
