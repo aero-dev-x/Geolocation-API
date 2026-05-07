@@ -24,19 +24,7 @@
       }
     },
     "schemas": {
-      "user_attributes": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        },
-        "required": [
-          "email"
-        ]
-      },
-      "sign_in_user_attributes": {
+      "auth_user_attributes": {
         "type": "object",
         "properties": {
           "email": {
@@ -45,12 +33,17 @@
           },
           "token": {
             "type": "string",
-            "description": "JWT token to send in the Authorization header for protected requests"
+            "description": "JWT access token. Expires after 30 minutes."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Opaque refresh token used to rotate and obtain a new access token."
           }
         },
         "required": [
           "email",
-          "token"
+          "token",
+          "refresh_token"
         ]
       },
       "user_resource": {
@@ -66,7 +59,7 @@
             ]
           },
           "attributes": {
-            "$ref": "#/components/schemas/user_attributes"
+            "$ref": "#/components/schemas/auth_user_attributes"
           }
         },
         "required": [
@@ -80,39 +73,6 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/user_resource"
-          }
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "sign_in_user_resource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "user"
-            ]
-          },
-          "attributes": {
-            "$ref": "#/components/schemas/sign_in_user_attributes"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "attributes"
-        ]
-      },
-      "sign_in_response": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/sign_in_user_resource"
           }
         },
         "required": [
@@ -170,6 +130,26 @@
         "required": [
           "user"
         ]
+      },
+      "refresh_token_request": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ]
+      },
+      "optional_refresh_token_request": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "geolocation_attributes": {
         "type": "object",
@@ -388,7 +368,7 @@
           "Authentication"
         ],
         "operationId": "signUpUser",
-        "description": "Creates a user account and returns a JWT in the Authorization response header.",
+        "description": "Creates a user account and returns a 30-minute JWT access token plus a refresh token.",
         "parameters": [],
         "responses": {
           "201": {
@@ -398,17 +378,19 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Bearer JWT token for the created user"
+                "description": "Bearer JWT access token for the created user"
               }
             },
             "content": {
               "application/json": {
                 "example": {
                   "data": {
-                    "id": "299",
+                    "id": "25",
                     "type": "user",
                     "attributes": {
-                      "email": "new@example.com"
+                      "email": "new@example.com",
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI3OTEwN2JjZi0wYmJkLTRkZTItODRiOC1iNTFmZmUzNjJiZTMiLCJzdWIiOiIyNSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc3ODE2NjMyNiwiZXhwIjoxNzc4MTY4MTI2fQ.hJA5QMlww3S-n__mzsLnfh28Umu2E_yZrjyfJj7Q3G4",
+                      "refresh_token": "RnVyyp_yb_xT3BcRjjGXJLFwiEnRe4cZXBtEdPSC91pIwq51fdgfvImRUhyKYmSm"
                     }
                   }
                 },
@@ -457,7 +439,7 @@
           "Authentication"
         ],
         "operationId": "signInUser",
-        "description": "Authenticates an existing user and returns a JWT in both the Authorization response header and the JSON response body.",
+        "description": "Authenticates an existing user and returns a 30-minute JWT access token plus a refresh token.",
         "parameters": [],
         "responses": {
           "200": {
@@ -467,23 +449,24 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Bearer JWT token for the signed-in user"
+                "description": "Bearer JWT access token for the signed-in user"
               }
             },
             "content": {
               "application/json": {
                 "example": {
                   "data": {
-                    "id": "301",
+                    "id": "27",
                     "type": "user",
                     "attributes": {
                       "email": "login@example.com",
-                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJhZDM3YjlkOS0wYWViLTQ5NDQtYTU5OS0wNGU5NWJkMzI0YTQiLCJzdWIiOiIzMDEiLCJzY3AiOiJ1c2VyIiwiYXVkIjpudWxsLCJpYXQiOjE3NzgxNjU5MjQsImV4cCI6MTc3ODI1MjMyNH0.tRZ_A8cSEZA5jbcD5Lt_QUUese00R9PagHhKbHI02Uc"
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIwYTdhNDcyZS0yZjZhLTRjZDYtOWI1MC01Mzc1YTVjYjYwNGIiLCJzdWIiOiIyNyIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc3ODE2NjMyNiwiZXhwIjoxNzc4MTY4MTI2fQ.ZREVU9o_2G0sKpL7XdgEfOBfRBlJA9WMZbe8-BmM79c",
+                      "refresh_token": "51M87InIzCYy3ycM3rZff64GnG5c9ARRq9Vl3FVHuJHJTa0MYEVH3vtOLWg8I9eM"
                     }
                   }
                 },
                 "schema": {
-                  "$ref": "#/components/schemas/sign_in_response"
+                  "$ref": "#/components/schemas/user_response"
                 }
               }
             }
@@ -520,6 +503,97 @@
         }
       }
     },
+    "/api/v1/users/refresh_token": {
+      "post": {
+        "summary": "Rotates a refresh token",
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "refreshUserToken",
+        "description": "Accepts a refresh token and returns a new 30-minute JWT access token plus a newly rotated refresh token.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "tokens refreshed",
+            "headers": {
+              "Authorization": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Bearer JWT access token for the user"
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": "29",
+                    "type": "user",
+                    "attributes": {
+                      "email": "refresh@example.com",
+                      "token": "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIxNDhjZjM4Ni1hNGQzLTQ2OTgtODdlNC0wYmY2MGE0YTEwMzgiLCJzdWIiOiIyOSIsInNjcCI6InVzZXIiLCJhdWQiOm51bGwsImlhdCI6MTc3ODE2NjMyNiwiZXhwIjoxNzc4MTY4MTI2fQ.7ltOmS0aAQX_T3I6moeQ95YTJeC0aTuj9EFrW9viaGo",
+                      "refresh_token": "37tXJ9V4iFTpY9y6X-1kfXIdrhdKLrQGs6fmYyzOEMu9gHgW6S3kI4SK_NeNd9cg"
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/user_response"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "401",
+                      "code": "invalid_refresh_token",
+                      "title": "Invalid Refresh Token",
+                      "detail": "Refresh token is invalid or expired"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "missing refresh token",
+            "content": {
+              "application/json": {
+                "example": {
+                  "errors": [
+                    {
+                      "status": "400",
+                      "code": "missing_parameter",
+                      "title": "Missing Parameter",
+                      "detail": "param is missing or the value is empty: refresh_token"
+                    }
+                  ]
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/error_response"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/refresh_token_request"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/sign_out": {
       "delete": {
         "summary": "Revokes the current JWT",
@@ -532,7 +606,7 @@
             "bearerAuth": []
           }
         ],
-        "description": "Revokes the current bearer token. The response body is empty. This endpoint currently returns 204 even when the Authorization header is omitted.",
+        "description": "Revokes the current bearer token. If a refresh token is included, that refresh token is revoked too. The response body is empty. This endpoint currently returns 204 even when the Authorization header is omitted.",
         "parameters": [
           {
             "name": "Authorization",
@@ -547,6 +621,15 @@
         "responses": {
           "204": {
             "description": "signed out"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/optional_refresh_token_request"
+              }
+            }
           }
         }
       }
@@ -603,7 +686,7 @@
                 "example": {
                   "data": [
                     {
-                      "id": "166",
+                      "id": "8",
                       "type": "geolocation",
                       "attributes": {
                         "ip": "1.1.1.3",
@@ -618,8 +701,8 @@
                         "latitude": "34.0655",
                         "longitude": "-118.2405",
                         "provider": "ipstack",
-                        "created_at": "2026-05-06T14:58:44.246Z",
-                        "updated_at": "2026-05-07T14:58:44.247Z"
+                        "created_at": "2026-05-06T15:05:27.000Z",
+                        "updated_at": "2026-05-07T15:05:27.001Z"
                       }
                     }
                   ],
@@ -687,7 +770,7 @@
               "application/json": {
                 "example": {
                   "data": {
-                    "id": "167",
+                    "id": "9",
                     "type": "geolocation",
                     "attributes": {
                       "ip": "64.233.180.113",
@@ -702,8 +785,8 @@
                       "latitude": "37.3880196",
                       "longitude": "-122.0743103",
                       "provider": "null",
-                      "created_at": "2026-05-07T14:58:44.280Z",
-                      "updated_at": "2026-05-07T14:58:44.280Z"
+                      "created_at": "2026-05-07T15:05:27.034Z",
+                      "updated_at": "2026-05-07T15:05:27.034Z"
                     }
                   }
                 },
@@ -719,7 +802,7 @@
               "application/json": {
                 "example": {
                   "data": {
-                    "id": "168",
+                    "id": "10",
                     "type": "geolocation",
                     "attributes": {
                       "ip": "64.233.180.113",
@@ -734,8 +817,8 @@
                       "latitude": "37.3880196",
                       "longitude": "-122.0743103",
                       "provider": "null",
-                      "created_at": "2026-05-07T14:58:44.285Z",
-                      "updated_at": "2026-05-07T14:58:44.294Z"
+                      "created_at": "2026-05-07T15:05:27.039Z",
+                      "updated_at": "2026-05-07T15:05:27.049Z"
                     }
                   }
                 },
@@ -856,7 +939,7 @@
               "application/json": {
                 "example": {
                   "data": {
-                    "id": "169",
+                    "id": "11",
                     "type": "geolocation",
                     "attributes": {
                       "ip": "1.2.3.4",
@@ -871,8 +954,8 @@
                       "latitude": "34.0655",
                       "longitude": "-118.2405",
                       "provider": "ipstack",
-                      "created_at": "2026-05-07T14:58:44.327Z",
-                      "updated_at": "2026-05-07T14:58:44.327Z"
+                      "created_at": "2026-05-07T15:05:27.080Z",
+                      "updated_at": "2026-05-07T15:05:27.080Z"
                     }
                   }
                 },

@@ -14,6 +14,7 @@ module ErrorHandler
     rescue_from ActiveRecord::RecordInvalid, with: :handle_validation_error
     rescue_from ActionController::ParameterMissing, with: :handle_missing_parameter
     rescue_from ::AmbiguousParameterError, with: :handle_ambiguous_parameter
+    rescue_from ::InvalidRefreshTokenError, with: :handle_invalid_refresh_token
     rescue_from ::InvalidUrlError, with: :handle_invalid_url
 
     rescue_from GeolocationProviders::ProviderError, with: :handle_provider_error
@@ -79,6 +80,15 @@ module ErrorHandler
       status: :unprocessable_content,
       code: 'invalid_url',
       title: 'Invalid URL',
+      detail: error.message
+    )
+  end
+
+  def handle_invalid_refresh_token(error)
+    render_error(
+      status: :unauthorized,
+      code: 'invalid_refresh_token',
+      title: 'Invalid Refresh Token',
       detail: error.message
     )
   end

@@ -33,27 +33,21 @@ RSpec.configure do |config|
           }
         },
         schemas: {
-          user_attributes: {
-            type: :object,
-            properties: {
-              email: { type: :string, format: :email }
-            },
-            required: ['email']
-          },
-          sign_in_user_attributes: {
+          auth_user_attributes: {
             type: :object,
             properties: {
               email: { type: :string, format: :email },
-              token: { type: :string, description: 'JWT token to send in the Authorization header for protected requests' }
+              token: { type: :string, description: 'JWT access token. Expires after 30 minutes.' },
+              refresh_token: { type: :string, description: 'Opaque refresh token used to rotate and obtain a new access token.' }
             },
-            required: %w[email token]
+            required: %w[email token refresh_token]
           },
           user_resource: {
             type: :object,
             properties: {
               id: { type: :string },
               type: { type: :string, enum: ['user'] },
-              attributes: { '$ref' => '#/components/schemas/user_attributes' }
+              attributes: { '$ref' => '#/components/schemas/auth_user_attributes' }
             },
             required: %w[id type attributes]
           },
@@ -61,22 +55,6 @@ RSpec.configure do |config|
             type: :object,
             properties: {
               data: { '$ref' => '#/components/schemas/user_resource' }
-            },
-            required: ['data']
-          },
-          sign_in_user_resource: {
-            type: :object,
-            properties: {
-              id: { type: :string },
-              type: { type: :string, enum: ['user'] },
-              attributes: { '$ref' => '#/components/schemas/sign_in_user_attributes' }
-            },
-            required: %w[id type attributes]
-          },
-          sign_in_response: {
-            type: :object,
-            properties: {
-              data: { '$ref' => '#/components/schemas/sign_in_user_resource' }
             },
             required: ['data']
           },
@@ -108,6 +86,19 @@ RSpec.configure do |config|
               }
             },
             required: ['user']
+          },
+          refresh_token_request: {
+            type: :object,
+            properties: {
+              refresh_token: { type: :string }
+            },
+            required: ['refresh_token']
+          },
+          optional_refresh_token_request: {
+            type: :object,
+            properties: {
+              refresh_token: { type: :string, nullable: true }
+            }
           },
           geolocation_attributes: {
             type: :object,

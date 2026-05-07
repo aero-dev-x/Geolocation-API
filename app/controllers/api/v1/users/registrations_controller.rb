@@ -4,6 +4,8 @@ module Api
   module V1
     module Users
       class RegistrationsController < Devise::RegistrationsController
+        include AuthResponseRenderer
+
         respond_to :json
         skip_before_action :authenticate_user!
 
@@ -15,13 +17,12 @@ module Api
 
         def respond_with(resource, _opts = {})
           if resource.persisted?
-            render json: {
-              data: {
-                id: resource.id.to_s,
-                type: 'user',
-                attributes: { email: resource.email }
-              }
-            }, status: :created
+            render_auth_response(
+              user: resource,
+              access_token: request.env['warden-jwt_auth.token'],
+              refresh_token: RefreshToken.issue_for!(resource),
+              status: :created
+            )
           else
             render json: {
               errors: resource.errors.map do |error|

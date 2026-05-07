@@ -90,14 +90,27 @@ All `/api/v1/geolocations` endpoints require a bearer token:
 Authorization: Bearer <JWT>
 ```
 
-JWTs are returned in the `Authorization` response header from:
+Access tokens are returned in the `Authorization` response header from:
 
 - `POST /api/v1/users/sign_up`
 - `POST /api/v1/users/sign_in`
+- `POST /api/v1/users/refresh_token`
 
-`POST /api/v1/users/sign_in` also returns the JWT in `data.attributes.token` for easier frontend consumption.
+Auth success responses include:
 
-The JWT payload expires after 24 hours.
+- `data.attributes.token`: JWT access token
+- `data.attributes.refresh_token`: refresh token
+
+Token lifetime:
+
+- access token: 30 minutes
+- refresh token: 14 days
+
+Recommended frontend flow:
+
+1. Use `token` as `Authorization: Bearer <token>` for protected API requests.
+2. When the access token expires, call `POST /api/v1/users/refresh_token` with the `refresh_token`.
+3. Replace both stored tokens with the newly returned values.
 
 ## Geolocation fields
 
@@ -141,8 +154,8 @@ Request body:
 Success:
 
 - `201 Created`
-- Response body contains the user resource
-- `Authorization` response header contains the bearer token
+- Response body contains the user resource, `data.attributes.token`, and `data.attributes.refresh_token`
+- `Authorization` response header contains the bearer access token
 
 Validation errors:
 
@@ -166,16 +179,47 @@ Request body:
 Success:
 
 - `200 OK`
-- Response body contains the user resource and `data.attributes.token`
-- `Authorization` response header contains the bearer token
+- Response body contains the user resource, `data.attributes.token`, and `data.attributes.refresh_token`
+- `Authorization` response header contains the bearer access token
 
 Errors:
 
 - `401 Unauthorized` for invalid credentials
 
+### `POST /api/v1/users/refresh_token`
+
+Rotates a refresh token and returns a new access token plus a new refresh token.
+
+Request body:
+
+```json
+{
+  "refresh_token": "opaque-refresh-token"
+}
+```
+
+Success:
+
+- `200 OK`
+- Response body contains the user resource, `data.attributes.token`, and `data.attributes.refresh_token`
+- `Authorization` response header contains the new bearer access token
+
+Errors:
+
+- `400 Bad Request` when `refresh_token` is missing
+- `401 Unauthorized` when the refresh token is invalid, expired, or already used
+
 ### `DELETE /api/v1/users/sign_out`
 
-Revokes the current JWT.
+Revokes the current JWT. If you send the current `refresh_token` too, it revokes that session refresh token as well.
+
+Optional request body:
+
+```json
+{
+  "refresh_token": "opaque-refresh-token"
+}
+```
 
 Success:
 
@@ -304,6 +348,7 @@ Errors use a JSON:API-style `errors` array:
 | `400` | `missing_parameter` | Required wrapper or attribute is missing |
 | `400` | `ambiguous_parameter` | Both `ip` and `url` were provided |
 | `401` | `unauthorized` | Missing or invalid authentication |
+| `401` | `invalid_refresh_token` | Refresh token is invalid, expired, revoked, or already used |
 | `404` | `not_found` | Resource was not found |
 | `422` | `invalid_ip` | Invalid IP format |
 | `422` | `invalid_url` | Invalid URL format |

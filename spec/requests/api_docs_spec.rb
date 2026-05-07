@@ -21,13 +21,13 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       operationId 'signUpUser'
       consumes 'application/json'
       produces 'application/json'
-      description 'Creates a user account and returns a JWT in the Authorization response header.'
+      description 'Creates a user account and returns a 30-minute JWT access token plus a refresh token.'
 
       parameter name: :payload, in: :body, schema: { '$ref' => '#/components/schemas/sign_up_request' }
 
       response '201', 'user created' do
         schema '$ref' => '#/components/schemas/user_response'
-        header 'Authorization', schema: { type: :string }, description: 'Bearer JWT token for the created user'
+        header 'Authorization', schema: { type: :string }, description: 'Bearer JWT access token for the created user'
 
         let(:payload) do
           {
@@ -78,13 +78,13 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       operationId 'signInUser'
       consumes 'application/json'
       produces 'application/json'
-      description 'Authenticates an existing user and returns a JWT in both the Authorization response header and the JSON response body.'
+      description 'Authenticates an existing user and returns a 30-minute JWT access token plus a refresh token.'
 
       parameter name: :payload, in: :body, schema: { '$ref' => '#/components/schemas/sign_in_request' }
 
       response '200', 'authenticated' do
-        schema '$ref' => '#/components/schemas/sign_in_response'
-        header 'Authorization', schema: { type: :string }, description: 'Bearer JWT token for the signed-in user'
+        schema '$ref' => '#/components/schemas/user_response'
+        header 'Authorization', schema: { type: :string }, description: 'Bearer JWT access token for the signed-in user'
 
         let!(:existing_user) { create(:user, email: 'login@example.com', password: 'Password1!') }
         let(:payload) do
@@ -126,18 +126,89 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
     end
   end
 
+  path '/api/v1/users/refresh_token' do
+    post 'Rotates a refresh token' do
+      tags 'Authentication'
+      operationId 'refreshUserToken'
+      consumes 'application/json'
+      produces 'application/json'
+      description 'Accepts a refresh token and returns a new 30-minute JWT access token plus a newly rotated refresh token.'
+
+      parameter name: :payload, in: :body, schema: { '$ref' => '#/components/schemas/refresh_token_request' }
+
+      response '200', 'tokens refreshed' do
+        schema '$ref' => '#/components/schemas/user_response'
+        header 'Authorization', schema: { type: :string }, description: 'Bearer JWT access token for the user'
+
+        let!(:existing_user) { create(:user, email: 'refresh@example.com', password: 'Password1!') }
+        let(:payload) do
+          post '/api/v1/users/sign_in',
+               params: { user: { email: existing_user.email, password: 'Password1!' } },
+               as: :json
+
+          { refresh_token: json_response.dig('data', 'attributes', 'refresh_token') }
+        end
+
+        after do |example|
+          expect(response.headers['Authorization']).to eq("Bearer #{json_response.dig('data', 'attributes', 'token')}")
+          capture_response_example(example)
+        end
+
+        run_test!
+      end
+
+      response '401', 'invalid or expired refresh token' do
+        schema '$ref' => '#/components/schemas/error_response'
+        let(:payload) { { refresh_token: 'invalid-token' } }
+
+        after do |example|
+          capture_response_example(example)
+        end
+
+        run_test!
+      end
+
+      response '400', 'missing refresh token' do
+        schema '$ref' => '#/components/schemas/error_response'
+        let(:payload) { {} }
+
+        after do |example|
+          capture_response_example(example)
+        end
+
+        run_test!
+      end
+    end
+  end
+
   path '/api/v1/users/sign_out' do
     delete 'Revokes the current JWT' do
       tags 'Authentication'
       operationId 'signOutUser'
       security [{ bearerAuth: [] }]
+      consumes 'application/json'
       produces 'application/json'
-      description 'Revokes the current bearer token. The response body is empty. This endpoint currently returns 204 even when the Authorization header is omitted.'
+      description 'Revokes the current bearer token. If a refresh token is included, that refresh token is revoked too. The response body is empty. This endpoint currently returns 204 even when the Authorization header is omitted.'
 
       parameter name: 'Authorization', in: :header, schema: { type: :string }, required: true,
                 description: 'Bearer JWT token'
+      parameter name: :payload, in: :body, schema: { '$ref' => '#/components/schemas/optional_refresh_token_request' }
 
       response '204', 'signed out' do
+        let!(:existing_user) { create(:user, email: 'logout@example.com', password: 'Password1!') }
+        let(:Authorization) do
+          post '/api/v1/users/sign_in',
+               params: { user: { email: existing_user.email, password: 'Password1!' } },
+               as: :json
+
+          response.headers['Authorization']
+        end
+        let(:payload) do
+          {
+            refresh_token: json_response.dig('data', 'attributes', 'refresh_token')
+          }
+        end
+
         run_test!
       end
     end
