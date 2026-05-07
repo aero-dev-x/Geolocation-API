@@ -6,7 +6,7 @@ require 'ipaddr'
 class Geolocation < ApplicationRecord
   PROVIDERS = %w[ipstack null].freeze
 
-  validates :lookup_key, presence: true, uniqueness: { case_sensitive: false }
+  validates :ip, presence: true, uniqueness: true
   validates :provider, presence: true, inclusion: { in: PROVIDERS }
   validates :latitude,
             numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 },
@@ -17,8 +17,6 @@ class Geolocation < ApplicationRecord
   validate :ip_or_url_present
   validate :ip_must_be_valid_address
   validate :url_must_be_valid
-
-  before_validation :normalize_lookup_key
 
   private
 
@@ -36,16 +34,20 @@ class Geolocation < ApplicationRecord
     errors.add(:ip, 'must be a valid IP address')
   end
 
-  def normalize_lookup_key
-    self.lookup_key = lookup_key.to_s.downcase.strip
-  end
-
   def url_must_be_valid
     return if url.blank?
 
     uri = URI.parse(url)
-    errors.add(:url, 'must be valid') unless uri.host.present?
+    if uri.host.blank?
+      errors.add(:url, 'must be valid')
+      return
+    end
+
+    IPAddr.new(uri.host)
+    errors.add(:url, 'must be a hostname or website URL, not an IP address')
   rescue URI::InvalidURIError
     errors.add(:url, 'must be valid')
+  rescue IPAddr::InvalidAddressError
+    nil
   end
 end

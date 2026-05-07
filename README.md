@@ -120,7 +120,6 @@ Every geolocation response includes these `data.attributes` fields:
 |---|---|---|
 | `ip` | string or null | Resolved IP address |
 | `url` | string or null | Normalized URL such as `https://google.com` |
-| `lookup_key` | string | Unique lookup identifier used for fetch/delete |
 | `country_name` | string or null | Country name from provider |
 | `country_code` | string or null | ISO-style country code |
 | `region_name` | string or null | Region/state name |
@@ -258,11 +257,8 @@ Request body:
 
 ```json
 {
-  "data": {
-    "type": "geolocations",
-    "attributes": {
-      "ip": "1.2.3.4"
-    }
+  "geolocation": {
+    "ip": "1.2.3.4"
   }
 }
 ```
@@ -272,12 +268,21 @@ URL behavior:
 - accepts full URLs like `https://example.com`
 - accepts bare hostnames like `google.com`
 - normalizes hostnames to `https://<host>`
+- rejects raw IP addresses passed through the `url` field
 - resolves the hostname to an IP before provider lookup
+
+Input convention:
+
+- use `ip` only for literal IP addresses
+- use `url` only for hostnames or website URLs
+- send them inside the `geolocation` object
 
 Upsert behavior:
 
 - returns `201 Created` for a new record
-- returns `200 OK` when the same `lookup_key` already exists and is updated
+- returns `200 OK` when the same record already exists and is updated
+- if a record already exists for the resolved IP, the API reuses that record instead of creating a duplicate
+- if that existing IP record has `url: null` and the new request came through `url`, the API fills in the normalized URL
 
 Errors:
 
@@ -289,13 +294,14 @@ Errors:
 - `504 Gateway Timeout`
 - `500 Internal Server Error`
 
-### `GET /api/v1/geolocations/:lookup_key`
+### `GET /api/v1/geolocations/:identifier`
 
-Fetches a stored geolocation by `lookup_key`.
+Fetches a stored geolocation by identifier.
 
 Notes:
 
-- URL-style lookup keys must be URL-encoded
+- the path value may match `ip` or `url`
+- URL-style values must be URL-encoded
 - example: `/api/v1/geolocations/https%3A%2F%2Fgoogle.com`
 
 Success:
@@ -307,9 +313,13 @@ Errors:
 - `401 Unauthorized`
 - `404 Not Found`
 
-### `DELETE /api/v1/geolocations/:lookup_key`
+### `DELETE /api/v1/geolocations/:identifier`
 
-Deletes a stored geolocation by `lookup_key`.
+Deletes a stored geolocation by identifier.
+
+Notes:
+
+- the path value may match `ip` or `url`
 
 Success:
 

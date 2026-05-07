@@ -232,10 +232,10 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       response '200', 'geolocations returned' do
         schema '$ref' => '#/components/schemas/geolocations_index_response'
         let!(:older_record) do
-          create(:geolocation, lookup_key: 'older.example', url: 'https://older.example', created_at: 2.days.ago)
+          create(:geolocation, ip: '1.1.1.10', url: 'https://older.example', created_at: 2.days.ago)
         end
         let!(:newer_record) do
-          create(:geolocation, lookup_key: 'newer.example', url: 'https://newer.example', created_at: 1.day.ago)
+          create(:geolocation, ip: '1.1.1.11', url: 'https://newer.example', created_at: 1.day.ago)
         end
         let(:'page[number]') { 1 }
         let(:'page[size]') { 1 }
@@ -265,7 +265,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       security [{ bearerAuth: [] }]
       consumes 'application/json'
       produces 'application/json'
-      description 'Accepts exactly one of ip or url. Existing records are updated in place and return 200.'
+      description 'Accepts exactly one of ip or url. Use ip only for literal IP addresses and url only for hostnames or website URLs. Existing records are reused by resolved IP and return 200.'
 
       parameter name: 'Authorization', in: :header, schema: { type: :string }, required: true,
                 description: 'Bearer JWT token'
@@ -296,14 +296,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       response '201', 'created from ip' do
         schema '$ref' => '#/components/schemas/geolocation_response'
         let(:payload) do
-          {
-            data: {
-              type: 'geolocations',
-              attributes: {
-                ip: '1.2.3.4'
-              }
-            }
-          }
+          { geolocation: { ip: '1.2.3.4' } }
         end
 
         after do |example|
@@ -319,22 +312,14 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
         before do
           create(
             :geolocation,
-            lookup_key: '1.2.3.4',
-            ip: '9.9.9.9',
+            ip: '64.233.180.113',
             city: 'Old City',
             provider: 'null'
           )
         end
 
         let(:payload) do
-          {
-            data: {
-              type: 'geolocations',
-              attributes: {
-                ip: '1.2.3.4'
-              }
-            }
-          }
+          { geolocation: { ip: '1.2.3.4' } }
         end
 
         after do |example|
@@ -347,14 +332,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       response '422', 'invalid url' do
         schema '$ref' => '#/components/schemas/error_response'
         let(:payload) do
-          {
-            data: {
-              type: 'geolocations',
-              attributes: {
-                url: 'https:///'
-              }
-            }
-          }
+          { geolocation: { url: 'https:///' } }
         end
 
         after do |example|
@@ -367,12 +345,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       response '400', 'missing ip and url' do
         schema '$ref' => '#/components/schemas/error_response'
         let(:payload) do
-          {
-            data: {
-              type: 'geolocations',
-              attributes: {}
-            }
-          }
+          {}
         end
 
         after do |example|
@@ -386,14 +359,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
         schema '$ref' => '#/components/schemas/error_response'
         let(:Authorization) { nil }
         let(:payload) do
-          {
-            data: {
-              type: 'geolocations',
-              attributes: {
-                ip: '1.2.3.4'
-              }
-            }
-          }
+          { geolocation: { ip: '1.2.3.4' } }
         end
 
         after do |example|
@@ -405,13 +371,13 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
     end
   end
 
-  path '/api/v1/geolocations/{lookup_key}' do
-    parameter name: :lookup_key, in: :path, schema: { type: :string }, required: true,
-              description: 'Lookup key. URL-based keys must be URL-encoded.'
+  path '/api/v1/geolocations/{identifier}' do
+    parameter name: :identifier, in: :path, schema: { type: :string }, required: true,
+              description: 'Record identifier. Can match ip or url. URL-based values must be URL-encoded.'
     parameter name: 'Authorization', in: :header, schema: { type: :string }, required: true,
               description: 'Bearer JWT token'
 
-    get 'Fetches a geolocation by lookup key' do
+    get 'Fetches a geolocation by identifier' do
       tags 'Geolocations'
       operationId 'showGeolocation'
       security [{ bearerAuth: [] }]
@@ -420,8 +386,23 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       response '200', 'geolocation found' do
         schema '$ref' => '#/components/schemas/geolocation_response'
 
-        let!(:geolocation) { create(:geolocation, lookup_key: '1.2.3.4', ip: '1.2.3.4') }
-        let(:lookup_key) { geolocation.lookup_key }
+        let!(:geolocation) { create(:geolocation, ip: '1.2.3.4') }
+        let(:identifier) { geolocation.ip }
+
+        after do |example|
+          capture_response_example(example)
+        end
+
+        run_test!
+      end
+
+      response '200', 'geolocation found by url identifier' do
+        schema '$ref' => '#/components/schemas/geolocation_response'
+
+        let!(:geolocation) do
+          create(:geolocation, ip: '64.233.180.113', url: 'https://google.com')
+        end
+        let(:identifier) { CGI.escape(geolocation.url) }
 
         after do |example|
           capture_response_example(example)
@@ -432,7 +413,7 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
 
       response '404', 'geolocation not found' do
         schema '$ref' => '#/components/schemas/error_response'
-        let(:lookup_key) { 'missing' }
+        let(:identifier) { 'missing' }
 
         after do |example|
           capture_response_example(example)
@@ -442,22 +423,31 @@ RSpec.describe 'API documentation', type: :request, openapi_spec: 'v1/openapi.js
       end
     end
 
-    delete 'Deletes a geolocation by lookup key' do
+    delete 'Deletes a geolocation by identifier' do
       tags 'Geolocations'
       operationId 'deleteGeolocation'
       security [{ bearerAuth: [] }]
       produces 'application/json'
 
       response '204', 'geolocation deleted' do
-        let!(:geolocation) { create(:geolocation, lookup_key: '1.2.3.4', ip: '1.2.3.4') }
-        let(:lookup_key) { geolocation.lookup_key }
+        let!(:geolocation) { create(:geolocation, ip: '1.2.3.4') }
+        let(:identifier) { geolocation.ip }
+
+        run_test!
+      end
+
+      response '204', 'geolocation deleted by url identifier' do
+        let!(:geolocation) do
+          create(:geolocation, ip: '64.233.180.113', url: 'https://google.com')
+        end
+        let(:identifier) { CGI.escape(geolocation.url) }
 
         run_test!
       end
 
       response '404', 'geolocation not found' do
         schema '$ref' => '#/components/schemas/error_response'
-        let(:lookup_key) { 'missing' }
+        let(:identifier) { 'missing' }
 
         after do |example|
           capture_response_example(example)

@@ -3,7 +3,6 @@
 FactoryBot.define do
   factory :geolocation do
     sequence(:ip)         { |n| "1.1.1.#{(n % 254) + 1}" }
-    sequence(:lookup_key) { |n| "1.1.1.#{(n % 254) + 1}" }
     country_name { 'United States' }
     country_code { 'US' }
     region_name  { 'California' }
@@ -17,7 +16,6 @@ FactoryBot.define do
 
     trait :with_url do
       url { 'https://github.com' }
-      lookup_key { 'https://github.com' }
       ip { '140.82.121.4' }
     end
   end

@@ -9,8 +9,7 @@ RSpec.describe GeolocationLookupResolver do
     it 'returns the IP lookup payload when given an IP address' do
       expect(described_class.resolve(ip: '1.2.3.4', url: nil)).to eq(
         ip: '1.2.3.4',
-        url: nil,
-        lookup_key: '1.2.3.4'
+        url: nil
       )
     end
 
@@ -19,8 +18,7 @@ RSpec.describe GeolocationLookupResolver do
 
       expect(described_class.resolve(ip: nil, url: 'google.com')).to eq(
         ip: '64.233.180.113',
-        url: 'https://google.com',
-        lookup_key: 'https://google.com'
+        url: 'https://google.com'
       )
     end
 
@@ -46,6 +44,12 @@ RSpec.describe GeolocationLookupResolver do
       expect do
         described_class.resolve(ip: nil, url: 'https:///')
       end.to raise_error(InvalidUrlError, 'Invalid URL')
+    end
+
+    it 'rejects an IP passed through the url field' do
+      expect do
+        described_class.resolve(ip: nil, url: '98.137.11.163')
+      end.to raise_error(InvalidUrlError, 'Use the ip field for IP address lookups')
     end
 
     it 'raises DnsError when the hostname cannot be resolved' do

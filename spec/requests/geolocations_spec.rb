@@ -30,15 +30,15 @@ RSpec.describe 'Geolocations API', type: :request do
   end
 
   describe 'GET /api/v1/geolocations' do
-    let!(:older_record) { create(:geolocation, lookup_key: 'older.example', url: 'https://older.example', created_at: 2.days.ago) }
-    let!(:newer_record) { create(:geolocation, lookup_key: 'newer.example', url: 'https://newer.example', created_at: 1.day.ago) }
+    let!(:older_record) { create(:geolocation, ip: '1.1.1.10', url: 'https://older.example', created_at: 2.days.ago) }
+    let!(:newer_record) { create(:geolocation, ip: '1.1.1.11', url: 'https://newer.example', created_at: 1.day.ago) }
 
     it 'returns records ordered by newest first' do
       get '/api/v1/geolocations', headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(json_response.dig('data', 0, 'attributes', 'lookup_key')).to eq(newer_record.lookup_key)
-      expect(json_response.dig('data', 1, 'attributes', 'lookup_key')).to eq(older_record.lookup_key)
+      expect(json_response.dig('data', 0, 'attributes', 'ip')).to eq(newer_record.ip)
+      expect(json_response.dig('data', 1, 'attributes', 'ip')).to eq(older_record.ip)
     end
 
     it 'returns pagination metadata for the requested page' do
@@ -60,26 +60,52 @@ RSpec.describe 'Geolocations API', type: :request do
     end
   end
 
-  describe 'GET /api/v1/geolocations/:lookup_key' do
-    let!(:geolocation) { create(:geolocation, lookup_key: '1.2.3.4', ip: '1.2.3.4') }
+  describe 'GET /api/v1/geolocations/:identifier' do
+    let!(:geolocation) { create(:geolocation, ip: '1.2.3.4') }
 
     it 'returns the requested record' do
       get '/api/v1/geolocations/1.2.3.4', headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(json_response.dig('data', 'attributes', 'lookup_key')).to eq('1.2.3.4')
+      expect(json_response.dig('data', 'attributes', 'ip')).to eq('1.2.3.4')
     end
 
-    it 'supports URL-encoded lookup keys' do
+    it 'supports URL-encoded url identifiers' do
       url_geolocation = create(:geolocation, :with_url)
 
-      get "/api/v1/geolocations/#{CGI.escape(url_geolocation.lookup_key)}", headers: headers
+      get "/api/v1/geolocations/#{CGI.escape(url_geolocation.url)}", headers: headers
 
       expect(response).to have_http_status(:ok)
-      expect(json_response.dig('data', 'attributes', 'lookup_key')).to eq(url_geolocation.lookup_key)
+      expect(json_response.dig('data', 'attributes', 'url')).to eq(url_geolocation.url)
     end
 
-    it 'returns not found for an unknown lookup key' do
+    it 'finds a record by ip' do
+      geolocation = create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: 'https://google.com'
+      )
+
+      get '/api/v1/geolocations/64.233.180.113', headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(json_response.dig('data', 'id')).to eq(geolocation.id.to_s)
+    end
+
+    it 'finds a record by url' do
+      geolocation = create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: 'https://google.com'
+      )
+
+      get "/api/v1/geolocations/#{CGI.escape('https://google.com')}", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(json_response.dig('data', 'id')).to eq(geolocation.id.to_s)
+    end
+
+    it 'returns not found for an unknown identifier' do
       get '/api/v1/geolocations/missing', headers: headers
 
       expect(response).to have_http_status(:not_found)
@@ -95,20 +121,10 @@ RSpec.describe 'Geolocations API', type: :request do
 
   describe 'POST /api/v1/geolocations' do
     let(:ip_params) do
-      {
-        data: {
-          type: 'geolocations',
-          attributes: { ip: '1.2.3.4' }
-        }
-      }
+      { geolocation: { ip: '1.2.3.4' } }
     end
     let(:url_params) do
-      {
-        data: {
-          type: 'geolocations',
-          attributes: { url: 'google.com' }
-        }
-      }
+      { geolocation: { url: 'google.com' } }
     end
 
     it 'creates a geolocation for an IP address' do
@@ -129,16 +145,14 @@ RSpec.describe 'Geolocations API', type: :request do
 
       expect(response).to have_http_status(:created)
       expect(json_response.dig('data', 'attributes', 'url')).to eq('https://google.com')
-      expect(json_response.dig('data', 'attributes', 'lookup_key')).to eq('https://google.com')
       expect(json_response.dig('data', 'attributes', 'ip')).to eq('64.233.180.113')
       expect(json_response.dig('data', 'attributes', 'city')).to eq('Mountain View')
     end
 
-    it 'updates an existing record for the same lookup key' do
+    it 'updates an existing record for the same ip' do
       geolocation = create(
         :geolocation,
-        lookup_key: '1.2.3.4',
-        ip: '9.9.9.9',
+        ip: '64.233.180.113',
         city: 'Old City',
         provider: 'null'
       )
@@ -152,9 +166,29 @@ RSpec.describe 'Geolocations API', type: :request do
       expect(geolocation.provider).to eq('null')
     end
 
+    it 'reuses an existing IP record when the same IP is later submitted as a url lookup' do
+      geolocation = create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: nil,
+        city: 'Old City',
+        provider: 'null'
+      )
+
+      allow(Resolv).to receive(:getaddress).with('google.com').and_return('64.233.180.113')
+
+      expect do
+        post '/api/v1/geolocations', params: url_params, headers: headers, as: :json
+      end.not_to change(Geolocation, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(geolocation.reload.url).to eq('https://google.com')
+      expect(json_response.dig('data', 'attributes', 'ip')).to eq('64.233.180.113')
+    end
+
     it 'returns an error when neither ip nor url is provided' do
       post '/api/v1/geolocations',
-           params: { data: { type: 'geolocations', attributes: {} } },
+           params: {},
            headers: headers,
            as: :json
 
@@ -162,16 +196,9 @@ RSpec.describe 'Geolocations API', type: :request do
       expect(json_response.dig('errors', 0, 'code')).to eq('missing_parameter')
     end
 
-    it 'returns an error when the data wrapper is missing' do
-      post '/api/v1/geolocations', params: {}, headers: headers, as: :json
-
-      expect(response).to have_http_status(:bad_request)
-      expect(json_response.dig('errors', 0, 'code')).to eq('missing_parameter')
-    end
-
     it 'returns an error when both ip and url are provided' do
       post '/api/v1/geolocations',
-           params: { data: { type: 'geolocations', attributes: { ip: '1.2.3.4', url: 'https://example.com' } } },
+           params: { geolocation: { ip: '1.2.3.4', url: 'https://example.com' } },
            headers: headers,
            as: :json
 
@@ -181,7 +208,7 @@ RSpec.describe 'Geolocations API', type: :request do
 
     it 'returns an error for an invalid IP address' do
       post '/api/v1/geolocations',
-           params: { data: { type: 'geolocations', attributes: { ip: '999.999.999.999' } } },
+           params: { geolocation: { ip: '999.999.999.999' } },
            headers: headers,
            as: :json
 
@@ -191,7 +218,7 @@ RSpec.describe 'Geolocations API', type: :request do
 
     it 'returns an error for an invalid URL' do
       post '/api/v1/geolocations',
-           params: { data: { type: 'geolocations', attributes: { url: 'https:///' } } },
+           params: { geolocation: { url: 'https:///' } },
            headers: headers,
            as: :json
 
@@ -203,12 +230,22 @@ RSpec.describe 'Geolocations API', type: :request do
       allow(Resolv).to receive(:getaddress).and_raise(Resolv::ResolvError)
 
       post '/api/v1/geolocations',
-           params: { data: { type: 'geolocations', attributes: { url: 'missing.example' } } },
+           params: { geolocation: { url: 'missing.example' } },
            headers: headers,
            as: :json
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(json_response.dig('errors', 0, 'code')).to eq('dns_resolution_failed')
+    end
+
+    it 'returns an error when an IP address is passed in the url field' do
+      post '/api/v1/geolocations',
+           params: { geolocation: { url: '98.137.11.163' } },
+           headers: headers,
+           as: :json
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json_response.dig('errors', 0, 'code')).to eq('invalid_url')
     end
 
     it 'returns an error when the provider quota is exceeded' do
@@ -267,9 +304,9 @@ RSpec.describe 'Geolocations API', type: :request do
     end
   end
 
-  describe 'DELETE /api/v1/geolocations/:lookup_key' do
-    it 'deletes the geolocation identified by its lookup key' do
-      create(:geolocation, lookup_key: '5.5.5.5', ip: '5.5.5.5')
+  describe 'DELETE /api/v1/geolocations/:identifier' do
+    it 'deletes the geolocation identified by its ip' do
+      create(:geolocation, ip: '5.5.5.5')
 
       expect do
         delete '/api/v1/geolocations/5.5.5.5', headers: headers
@@ -278,17 +315,45 @@ RSpec.describe 'Geolocations API', type: :request do
       expect(response).to have_http_status(:no_content)
     end
 
-    it 'deletes a record with a URL lookup key' do
+    it 'deletes a record with a URL identifier' do
       geolocation = create(:geolocation, :with_url)
 
       expect do
-        delete "/api/v1/geolocations/#{CGI.escape(geolocation.lookup_key)}", headers: headers
+        delete "/api/v1/geolocations/#{CGI.escape(geolocation.url)}", headers: headers
       end.to change(Geolocation, :count).by(-1)
 
       expect(response).to have_http_status(:no_content)
     end
 
-    it 'returns not found for an unknown lookup key' do
+    it 'deletes a record when addressed by ip even if it also has a url' do
+      create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: 'https://google.com'
+      )
+
+      expect do
+        delete '/api/v1/geolocations/64.233.180.113', headers: headers
+      end.to change(Geolocation, :count).by(-1)
+
+      expect(response).to have_http_status(:no_content)
+    end
+
+    it 'deletes a record when addressed by url' do
+      create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: 'https://google.com'
+      )
+
+      expect do
+        delete "/api/v1/geolocations/#{CGI.escape('https://google.com')}", headers: headers
+      end.to change(Geolocation, :count).by(-1)
+
+      expect(response).to have_http_status(:no_content)
+    end
+
+    it 'returns not found for an unknown identifier' do
       delete '/api/v1/geolocations/missing', headers: headers
 
       expect(response).to have_http_status(:not_found)

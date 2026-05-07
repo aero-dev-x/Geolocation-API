@@ -105,7 +105,6 @@ RSpec.configure do |config|
             properties: {
               ip: { type: :string, nullable: true },
               url: { type: :string, nullable: true },
-              lookup_key: { type: :string },
               country_name: { type: :string, nullable: true },
               country_code: { type: :string, nullable: true },
               region_name: { type: :string, nullable: true },
@@ -119,7 +118,7 @@ RSpec.configure do |config|
               updated_at: { type: :string, format: :'date-time' }
             },
             required: %w[
-              lookup_key
+              ip
               provider
               created_at
               updated_at
@@ -163,22 +162,15 @@ RSpec.configure do |config|
           geolocation_create_request: {
             type: :object,
             properties: {
-              data: {
+              geolocation: {
                 type: :object,
                 properties: {
-                  type: { type: :string, enum: ['geolocations'] },
-                  attributes: {
-                    type: :object,
-                    properties: {
-                      ip: { type: :string, nullable: true },
-                      url: { type: :string, nullable: true }
-                    }
-                  }
-                },
-                required: %w[type attributes]
+                  ip: { type: :string, nullable: true, description: 'Literal IPv4 or IPv6 address' },
+                  url: { type: :string, nullable: true, description: 'Hostname or website URL. Do not send a raw IP here.' }
+                }
               }
             },
-            required: ['data']
+            required: ['geolocation']
           },
           error_object: {
             type: :object,

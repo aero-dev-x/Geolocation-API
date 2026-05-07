@@ -3,8 +3,7 @@
 class CreateGeolocations < ActiveRecord::Migration[7.1]
   def change
     create_table :geolocations do |t|
-      t.string :lookup_key, null: false
-      t.string :ip
+      t.string :ip, null: false
       t.text :url
       t.string :country_name
       t.string :country_code, limit: 2
@@ -20,17 +19,8 @@ class CreateGeolocations < ActiveRecord::Migration[7.1]
       t.timestamps
     end
 
-    add_index :geolocations,
-              'LOWER(lookup_key)',
-              unique: true,
-              name: 'index_geolocations_on_lower_lookup_key'
-
-    add_index :geolocations, :ip
+    add_index :geolocations, :ip, unique: true
     add_index :geolocations, :url
-
-    add_check_constraint :geolocations,
-                         '(ip IS NOT NULL OR url IS NOT NULL)',
-                         name: 'ip_or_url_present'
 
     add_check_constraint :geolocations,
                          'latitude IS NULL OR latitude BETWEEN -90 AND 90',

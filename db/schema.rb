@@ -15,8 +15,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_07_160000) do
   enable_extension "plpgsql"
 
   create_table "geolocations", force: :cascade do |t|
-    t.string "lookup_key", null: false
-    t.string "ip"
+    t.string "ip", null: false
     t.text "url"
     t.string "country_name"
     t.string "country_code", limit: 2
@@ -30,10 +29,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_07_160000) do
     t.jsonb "provider_response", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index "lower((lookup_key)::text)", name: "index_geolocations_on_lower_lookup_key", unique: true
-    t.index ["ip"], name: "index_geolocations_on_ip"
+    t.index ["ip"], name: "index_geolocations_on_ip", unique: true
     t.index ["url"], name: "index_geolocations_on_url"
-    t.check_constraint "ip IS NOT NULL OR url IS NOT NULL", name: "ip_or_url_present"
     t.check_constraint "latitude IS NULL OR latitude >= '-90'::integer::numeric AND latitude <= 90::numeric", name: "latitude_range"
     t.check_constraint "longitude IS NULL OR longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "longitude_range"
   end

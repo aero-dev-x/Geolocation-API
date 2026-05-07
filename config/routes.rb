@@ -24,8 +24,8 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :geolocations,
-                param: :lookup_key,
-                constraints: { lookup_key: %r{[^/]+} },
+                param: :identifier,
+                constraints: { identifier: %r{[^/]+} },
                 only: %i[index create show destroy]
     end
   end

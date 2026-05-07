@@ -42,11 +42,16 @@ module Api
       private
 
       def set_geolocation
-        @geolocation = Geolocation.find_by!(lookup_key: CGI.unescape(params[:lookup_key]))
+        identifier = CGI.unescape(params[:identifier])
+
+        @geolocation = Geolocation.find_by!(
+          'ip = :identifier OR url = :identifier',
+          identifier: identifier
+        )
       end
 
       def geolocation_params
-        attrs = params.require(:data).require(:attributes)
+        attrs = params.require(:geolocation).permit(:ip, :url)
 
         ip = attrs[:ip]
         url = attrs[:url]

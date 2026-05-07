@@ -7,7 +7,6 @@ class GeolocationSerializer
 
   attributes :ip,
              :url,
-             :lookup_key,
              :country_name,
              :country_code,
              :region_name,

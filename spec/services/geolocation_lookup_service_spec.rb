@@ -33,14 +33,12 @@ RSpec.describe GeolocationLookupService do
     it 'creates a geolocation using the resolved lookup data' do
       allow(GeolocationLookupResolver).to receive(:resolve).and_return(
         ip: '64.233.180.113',
-        url: nil,
-        lookup_key: '64.233.180.113'
+        url: nil
       )
 
       expect do
         geolocation = service.call(input: { ip: '64.233.180.113', url: nil })
 
-        expect(geolocation.lookup_key).to eq('64.233.180.113')
         expect(geolocation.ip).to eq('64.233.180.113')
         expect(geolocation.city).to eq('Mountain View')
         expect(geolocation.provider).to eq('null')
@@ -50,25 +48,22 @@ RSpec.describe GeolocationLookupService do
     it 'persists the normalized URL when the resolver returns one' do
       allow(GeolocationLookupResolver).to receive(:resolve).and_return(
         ip: '64.233.180.113',
-        url: 'https://google.com',
-        lookup_key: 'https://google.com'
+        url: 'https://google.com'
       )
 
       geolocation = service.call(input: { ip: nil, url: 'google.com' })
 
       expect(geolocation.url).to eq('https://google.com')
-      expect(geolocation.lookup_key).to eq('https://google.com')
       expect(geolocation.ip).to eq('64.233.180.113')
       expect(geolocation.city).to eq('Mountain View')
     end
 
     it 'updates an existing record instead of creating a duplicate' do
-      existing_record = create(:geolocation, lookup_key: '64.233.180.113', city: 'Old City', provider: 'null')
+      existing_record = create(:geolocation, ip: '64.233.180.113', city: 'Old City', provider: 'null')
 
       allow(GeolocationLookupResolver).to receive(:resolve).and_return(
         ip: '64.233.180.113',
-        url: nil,
-        lookup_key: '64.233.180.113'
+        url: nil
       )
 
       expect do
@@ -82,11 +77,32 @@ RSpec.describe GeolocationLookupService do
       )
     end
 
+    it 'reuses an existing IP record and fills the url when it was previously blank' do
+      existing_record = create(
+        :geolocation,
+        ip: '64.233.180.113',
+        url: nil,
+        city: 'Old City',
+        provider: 'null'
+      )
+
+      allow(GeolocationLookupResolver).to receive(:resolve).and_return(
+        ip: '64.233.180.113',
+        url: 'https://google.com'
+      )
+
+      expect do
+        service.call(input: { ip: nil, url: 'google.com' })
+      end.not_to change(Geolocation, :count)
+
+      expect(existing_record.reload.url).to eq('https://google.com')
+      expect(existing_record.city).to eq('Mountain View')
+    end
+
     it 'propagates provider errors' do
       allow(GeolocationLookupResolver).to receive(:resolve).and_return(
         ip: '64.233.180.113',
-        url: nil,
-        lookup_key: '64.233.180.113'
+        url: nil
       )
       allow(provider).to receive(:lookup).and_raise(GeolocationProviders::ProviderError, 'provider unavailable')
 
