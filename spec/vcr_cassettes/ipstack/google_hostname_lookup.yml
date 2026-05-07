@@ -1,0 +1,104 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: http://api.ipstack.com/google.com?access_key=<IPSTACK_KEY>&output=json
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 429
+      message: Too Many Requests
+    headers:
+      Date:
+      - Thu, 07 May 2026 14:24:32 GMT
+      Content-Type:
+      - application/json; Charset=UTF-8
+      Transfer-Encoding:
+      - chunked
+      X-Apilayer-Transaction-Id:
+      - 84645e3f-d44c-4c7e-b8a8-cbd3e9bb4046
+      Access-Control-Allow-Methods:
+      - GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS
+      Access-Control-Allow-Origin:
+      - "*"
+    body:
+      encoding: UTF-8
+      string: '{"success":false,"error":{"code":106,"type":"rate_limit_reached","info":"You
+        have exceeded the maximum rate limitation allowed on your subscription plan.
+        Please refer to the \"Rate Limits\" section of the API Documentation for details.
+        "}}'
+  recorded_at: Thu, 07 May 2026 14:24:32 GMT
+- request:
+    method: get
+    uri: http://api.ipstack.com/google.com?access_key=<IPSTACK_KEY>&output=json
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v2.14.1
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '1216'
+      X-Rate-Limit-Reset:
+      - '1778163873'
+      Date:
+      - Thu, 07 May 2026 14:24:33 GMT
+      X-Apilayer-Transaction-Id:
+      - 546de695-9933-4f75-9817-eaef87d55a57
+      Access-Control-Allow-Origin:
+      - "*"
+      Access-Control-Allow-Methods:
+      - GET, POST, HEAD, OPTIONS
+      Access-Control-Allow-Headers:
+      - "*"
+      X-Rate-Limit:
+      - '0'
+      X-Rate-Limit-Remaining:
+      - '0'
+      X-Quota-Limit:
+      - '5000'
+      X-Quota-Remaining:
+      - '4994'
+      X-Increment-Usage:
+      - '1'
+      X-Request-Time:
+      - '0.079'
+    body:
+      encoding: UTF-8
+      string: '{"ip": "64.233.180.102", "type": "ipv4", "continent_code": "NA", "continent_name":
+        "North America", "country_code": "US", "country_name": "United States", "region_code":
+        "CA", "region_name": "California", "city": "Mountain View", "zip": "94041",
+        "latitude": 37.38801956176758, "longitude": -122.07431030273438, "msa": "41940",
+        "dma": "807", "radius": "0", "ip_routing_type": "fixed", "connection_type":
+        "ocx", "location": {"geoname_id": 7173909, "capital": "Washington D.C.", "languages":
+        [{"code": "en", "name": "English", "native": "English"}], "country_flag":
+        "https://assets.ipstack.com/flags/us.svg", "country_flag_emoji": "\ud83c\uddfa\ud83c\uddf8",
+        "country_flag_emoji_unicode": "U+1F1FA U+1F1F8", "calling_code": "1", "is_eu":
+        false}, "time_zone": {"id": "America/Los_Angeles", "current_time": "2026-05-07T07:24:28-07:00",
+        "gmt_offset": -25200, "code": "PDT", "is_daylight_saving": true}, "currency":
+        {"code": "USD", "name": "US Dollar", "plural": "US dollars", "symbol": "$",
+        "symbol_native": "$"}, "connection": {"asn": 15169, "isp": "Google", "sld":
+        "1e100", "tld": "net", "carrier": "google", "home": false, "organization_type":
+        "Internet Service Provider", "isic_code": "J6110", "naics_code": "517311"}}'
+  recorded_at: Thu, 07 May 2026 14:24:33 GMT
+recorded_with: VCR 6.4.0

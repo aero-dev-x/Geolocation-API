@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 class GeolocationLookupService
-  def initialize(provider: Rails.configuration.geolocation_provider.new)
-    @provider = provider
+  def initialize(provider: Rails.configuration.geolocation_provider)
+    @provider = provider.respond_to?(:lookup) ? provider : provider.new
   end
 
   def call(input:)

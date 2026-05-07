@@ -3,7 +3,7 @@
 module Api
   module V1
     class GeolocationsController < ApplicationController
-      before_action :set_geolocation, only: %i[show destory]
+      before_action :set_geolocation, only: %i[show destroy]
 
       def index
         geolocations = Geolocation

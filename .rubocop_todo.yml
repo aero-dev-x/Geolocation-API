@@ -57,4 +57,5 @@ Layout/LineLength:
 
 Metrics/BlockLength:
   Exclude:
+    - 'db/schema.rb'
     - 'config/initializers/devise.rb'

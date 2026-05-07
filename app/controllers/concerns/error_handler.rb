@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative '../../errors/api_errors'
+
 module ErrorHandler
   extend ActiveSupport::Concern
 
@@ -11,8 +13,8 @@ module ErrorHandler
     rescue_from ActiveRecord::RecordNotFound, with: :handle_not_found
     rescue_from ActiveRecord::RecordInvalid, with: :handle_validation_error
     rescue_from ActionController::ParameterMissing, with: :handle_missing_parameter
-    rescue_from AmbiguousParameterError, with: :handle_ambiguous_parameter
-    rescue_from InvalidUrlError, with: :handle_invalid_url
+    rescue_from ::AmbiguousParameterError, with: :handle_ambiguous_parameter
+    rescue_from ::InvalidUrlError, with: :handle_invalid_url
 
     rescue_from GeolocationProviders::ProviderError, with: :handle_provider_error
     rescue_from GeolocationProviders::InvalidIpError, with: :handle_invalid_ip
@@ -47,7 +49,7 @@ module ErrorHandler
 
   def handle_validation_error(error)
     render_error(
-      status: :unprocessable_entity,
+      status: :unprocessable_content,
       code: 'validation_error',
       title: 'Validation Error',
       detail: error.record.errors.full_messages.join(', ')
@@ -74,7 +76,7 @@ module ErrorHandler
 
   def handle_invalid_url(error)
     render_error(
-      status: :unprocessable_entity,
+      status: :unprocessable_content,
       code: 'invalid_url',
       title: 'Invalid URL',
       detail: error.message
@@ -83,7 +85,7 @@ module ErrorHandler
 
   def handle_invalid_ip(error)
     render_error(
-      status: :unprocessable_entity,
+      status: :unprocessable_content,
       code: 'invalid_ip',
       title: 'Invalid IP Address',
       detail: error.message
@@ -92,7 +94,7 @@ module ErrorHandler
 
   def handle_dns_error(error)
     render_error(
-      status: :unprocessable_entity,
+      status: :unprocessable_content,
       code: 'dns_resolution_failed',
       title: 'DNS Resolution Failed',
       detail: error.message

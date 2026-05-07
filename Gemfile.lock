@@ -119,6 +119,10 @@ GEM
       warden-jwt_auth (~> 0.10)
     diff-lcs (1.6.2)
     docile (1.4.1)
+    dotenv (3.2.0)
+    dotenv-rails (3.2.0)
+      dotenv (= 3.2.0)
+      railties (>= 6.1)
     drb (2.2.3)
     dry-auto_inject (1.1.0)
       dry-core (~> 1.1)
@@ -378,6 +382,7 @@ DEPENDENCIES
   debug
   devise (~> 5.0)
   devise-jwt (~> 0.13.0)
+  dotenv-rails
   factory_bot_rails
   faker
   faraday (~> 2.14)
