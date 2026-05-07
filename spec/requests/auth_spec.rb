@@ -49,7 +49,7 @@ RSpec.describe 'Authentication', type: :request do
   describe 'POST /api/v1/users/sign_in' do
     let!(:user) { create(:user, email: 'login@example.com', password: 'Password1!') }
 
-    it 'returns the user payload and a bearer token for valid credentials' do
+    it 'returns the user payload and token for valid credentials' do
       post '/api/v1/users/sign_in',
            params: { user: { email: user.email, password: 'Password1!' } },
            as: :json
@@ -57,6 +57,8 @@ RSpec.describe 'Authentication', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.headers['Authorization']).to start_with('Bearer ')
       expect(json_response.dig('data', 'attributes', 'email')).to eq(user.email)
+      expect(json_response.dig('data', 'attributes', 'token')).to be_present
+      expect(response.headers['Authorization']).to eq("Bearer #{json_response.dig('data', 'attributes', 'token')}")
     end
 
     it 'returns unauthorized for invalid credentials' do

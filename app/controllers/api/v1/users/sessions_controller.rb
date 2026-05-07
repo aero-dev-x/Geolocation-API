@@ -14,11 +14,16 @@ module Api
         private
 
         def respond_with(resource, _opts = {})
+          token = request.env['warden-jwt_auth.token']
+
           render json: {
             data: {
               id: resource.id.to_s,
               type: 'user',
-              attributes: { email: resource.email }
+              attributes: {
+                email: resource.email,
+                token: token
+              }
             }
           }, status: :ok
         end

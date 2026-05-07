@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
+  mount Rswag::Ui::Engine => '/api-docs'
+  mount Rswag::Api::Engine => '/api-docs'
+  root to: redirect('/api-docs')
+
   scope path: '/api/v1' do
     devise_for :users,
                path: '',

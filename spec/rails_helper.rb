@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
-require 'simplecov'
-SimpleCov.start 'rails' do
-  add_filter '/spec/'
-  add_filter 'app/channels/'
-  add_filter 'app/jobs/'
-  add_filter 'app/mailers/'
-  add_filter 'app/models/jwt_denylist.rb'
-  minimum_coverage 95
+disable_simplecov = ENV['GENERATE_OPENAPI'] == 'true' || ARGV.include?('Rswag::Specs::SwaggerFormatter')
+
+unless disable_simplecov
+  require 'simplecov'
+  SimpleCov.start 'rails' do
+    add_filter '/spec/'
+    add_filter 'app/channels/'
+    add_filter 'app/jobs/'
+    add_filter 'app/mailers/'
+    add_filter 'app/models/jwt_denylist.rb'
+    minimum_coverage 95
+  end
 end
 
 require 'spec_helper'
@@ -15,6 +19,7 @@ ENV['RAILS_ENV'] ||= 'test'
 require_relative '../config/environment'
 abort('The Rails environment is running in production mode!') if Rails.env.production?
 require 'rspec/rails'
+require 'rswag/specs'
 require 'shoulda/matchers'
 require 'webmock/rspec'
 require 'vcr'
@@ -57,6 +62,7 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   config.include FactoryBot::Syntax::Methods
   config.include RequestHelpers, type: :request
+  config.openapi_root = Rails.root.join('openapi').to_s
 end
 
 Shoulda::Matchers.configure do |config|

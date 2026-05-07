@@ -1,16 +1,14 @@
 # Geolocations API
 
-A Rails JSON API for storing and retrieving geolocation data for IP addresses and URLs/hostnames using ipstack.
+A Rails JSON API for storing and retrieving geolocation data for IP addresses and URLs/hostnames using `ipstack`.
 
 - Auth: JWT via `devise-jwt`
-- Geolocation storage: upsert by `lookup_key`
-- Pagination: `kaminari` with JSON:API-style `meta`
-- Provider abstraction: swappable provider adapter, `IpstackProvider` in normal use and `NullProvider` in test
+- Serialization: JSON:API-style payloads via `jsonapi-serializer`
+- Pagination: `kaminari`
 - Rate limiting: `rack-attack`
+- API docs: Swagger UI via `rswag`
 
 ## Quick start
-
-### Local setup
 
 1. Install dependencies:
 
@@ -18,17 +16,17 @@ A Rails JSON API for storing and retrieving geolocation data for IP addresses an
 bundle install
 ```
 
-2. Create env files from the template:
+2. Create environment files:
 
 ```bash
 cp .env.example .env.development
 cp .env.example .env.test
 ```
 
-3. Update the database names:
+3. Update database names as needed:
 
 - `.env.development`: keep `POSTGRES_DB=geolocations_api_development`
-- `.env.test`: set `POSTGRES_DB=geolocations_api_test`
+- `.env.test`: change `POSTGRES_DB=geolocations_api_test`
 
 4. Create and migrate the databases:
 
@@ -44,53 +42,148 @@ bin/rails server
 
 The API is available at `http://localhost:3000`.
 
-## Environment files
+## API docs
 
-This project uses `dotenv-rails` with separate environment files:
+Swagger UI is available at:
+
+- `http://localhost:3000/api-docs`
+
+Raw OpenAPI JSON is available at:
+
+- `http://localhost:3000/api-docs/v1/openapi.json`
+
+Regenerate the OpenAPI file after changing endpoints or response shapes:
+
+```bash
+bundle exec rspec spec/requests/api_docs_spec.rb --format Rswag::Specs::SwaggerFormatter --order defined
+```
+
+This writes the current API contract to `openapi/v1/openapi.json`.
+
+## Environment variables
+
+This project uses `dotenv-rails` with environment-specific files:
 
 - `.env.development`
 - `.env.test`
 
-Tracked templates:
+Tracked template:
 
 - `.env.example`
 
-Important variables:
-
-| Variable | Used in | Description |
-|---|---|---|
-| `IPSTACK_ACCESS_KEY` | development, test | ipstack API key |
-| `DEVISE_JWT_SECRET_KEY` | development, test, production | JWT signing secret |
-| `POSTGRES_HOST` | development, test | PostgreSQL host |
-| `POSTGRES_USER` | development, test | PostgreSQL user |
-| `POSTGRES_PASSWORD` | development, test | PostgreSQL password |
-| `POSTGRES_DB` | development | Development database name |
-| `POSTGRES_DB_TEST` | test | Test database name |
-| `DATABASE_URL` | production | Production connection string |
+| Variable | Description |
+|---|---|
+| `IPSTACK_ACCESS_KEY` | ipstack API key |
+| `DEVISE_JWT_SECRET_KEY` | JWT signing secret |
+| `RAILS_MAX_THREADS` | Puma / Active Record thread pool |
+| `POSTGRES_HOST` | PostgreSQL host |
+| `POSTGRES_USER` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `POSTGRES_DB` | Database name for the current environment file |
+| `DATABASE_URL` | Production connection string |
 
 ## Authentication
 
-All `/api/v1/geolocations` endpoints require a bearer token from sign-up or sign-in.
+All `/api/v1/geolocations` endpoints require a bearer token:
 
 ```text
 Authorization: Bearer <JWT>
 ```
 
-JWTs expire after 24 hours. Signing out revokes the current token.
+JWTs are returned in the `Authorization` response header from:
 
-## Endpoints
+- `POST /api/v1/users/sign_up`
+- `POST /api/v1/users/sign_in`
+
+`POST /api/v1/users/sign_in` also returns the JWT in `data.attributes.token` for easier frontend consumption.
+
+The JWT payload expires after 24 hours.
+
+## Geolocation fields
+
+Every geolocation response includes these `data.attributes` fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `ip` | string or null | Resolved IP address |
+| `url` | string or null | Normalized URL such as `https://google.com` |
+| `lookup_key` | string | Unique lookup identifier used for fetch/delete |
+| `country_name` | string or null | Country name from provider |
+| `country_code` | string or null | ISO-style country code |
+| `region_name` | string or null | Region/state name |
+| `region_code` | string or null | Region/state code |
+| `city` | string or null | City name |
+| `zip` | string or null | Postal code |
+| `latitude` | string or null | Decimal value serialized as a string |
+| `longitude` | string or null | Decimal value serialized as a string |
+| `provider` | string | `ipstack` or `null` in tests |
+| `created_at` | ISO 8601 string | Record creation timestamp |
+| `updated_at` | ISO 8601 string | Record update timestamp |
+
+## Endpoint summary
 
 ### `POST /api/v1/users/sign_up`
 
-Creates a user and returns a JWT in the `Authorization` response header.
+Creates a user.
+
+Request body:
+
+```json
+{
+  "user": {
+    "email": "new@example.com",
+    "password": "Password1!",
+    "password_confirmation": "Password1!"
+  }
+}
+```
+
+Success:
+
+- `201 Created`
+- Response body contains the user resource
+- `Authorization` response header contains the bearer token
+
+Validation errors:
+
+- `422 Unprocessable Content`
 
 ### `POST /api/v1/users/sign_in`
 
-Signs in an existing user and returns a JWT in the `Authorization` response header.
+Authenticates an existing user.
+
+Request body:
+
+```json
+{
+  "user": {
+    "email": "login@example.com",
+    "password": "Password1!"
+  }
+}
+```
+
+Success:
+
+- `200 OK`
+- Response body contains the user resource and `data.attributes.token`
+- `Authorization` response header contains the bearer token
+
+Errors:
+
+- `401 Unauthorized` for invalid credentials
 
 ### `DELETE /api/v1/users/sign_out`
 
-Revokes the current JWT and returns `204 No Content`.
+Revokes the current JWT.
+
+Success:
+
+- `204 No Content`
+
+Current behavior:
+
+- returns `204` even if the `Authorization` header is missing
 
 ### `GET /api/v1/geolocations`
 
@@ -101,60 +194,125 @@ Query params:
 - `page[number]`
 - `page[size]`
 
+Success:
+
+- `200 OK`
+- Response contains `data` and pagination `meta`
+
+Errors:
+
+- `401 Unauthorized`
+
 ### `POST /api/v1/geolocations`
 
-Creates or refreshes a geolocation record from exactly one of:
+Creates or refreshes a geolocation from exactly one input:
 
 - `ip`
 - `url`
+
+Request body:
+
+```json
+{
+  "data": {
+    "type": "geolocations",
+    "attributes": {
+      "ip": "1.2.3.4"
+    }
+  }
+}
+```
 
 URL behavior:
 
 - accepts full URLs like `https://example.com`
 - accepts bare hostnames like `google.com`
 - normalizes hostnames to `https://<host>`
-- resolves the host to an IP before provider lookup
+- resolves the hostname to an IP before provider lookup
 
 Upsert behavior:
 
-- if the same `lookup_key` already exists, the record is updated and the response is `200 OK`
-- otherwise a new record is created and the response is `201 Created`
+- returns `201 Created` for a new record
+- returns `200 OK` when the same `lookup_key` already exists and is updated
+
+Errors:
+
+- `400 Bad Request`
+- `401 Unauthorized`
+- `422 Unprocessable Content`
+- `429 Too Many Requests`
+- `502 Bad Gateway`
+- `504 Gateway Timeout`
+- `500 Internal Server Error`
 
 ### `GET /api/v1/geolocations/:lookup_key`
 
-Fetches a stored geolocation by lookup key. URL-style lookup keys must be URL-encoded.
+Fetches a stored geolocation by `lookup_key`.
 
-Example:
+Notes:
 
-```text
-/api/v1/geolocations/https%3A%2F%2Fgoogle.com
-```
+- URL-style lookup keys must be URL-encoded
+- example: `/api/v1/geolocations/https%3A%2F%2Fgoogle.com`
+
+Success:
+
+- `200 OK`
+
+Errors:
+
+- `401 Unauthorized`
+- `404 Not Found`
 
 ### `DELETE /api/v1/geolocations/:lookup_key`
 
-Deletes a stored geolocation by lookup key.
+Deletes a stored geolocation by `lookup_key`.
+
+Success:
+
+- `204 No Content`
+
+Errors:
+
+- `401 Unauthorized`
+- `404 Not Found`
 
 ### `GET /up`
 
 Rails health check endpoint.
 
-## Error responses
+## Error format
 
-Errors are returned in a JSON:API-style `errors` array.
+Errors use a JSON:API-style `errors` array:
 
-Common geolocation error codes:
+```json
+{
+  "errors": [
+    {
+      "status": "422",
+      "code": "invalid_url",
+      "title": "Invalid URL",
+      "detail": "URL is invalid"
+    }
+  ]
+}
+```
+
+### Common error codes
 
 | Status | Code | Meaning |
 |---|---|---|
-| `400` | `missing_parameter` | Neither `ip` nor `url` was provided |
+| `400` | `missing_parameter` | Required wrapper or attribute is missing |
 | `400` | `ambiguous_parameter` | Both `ip` and `url` were provided |
+| `401` | `unauthorized` | Missing or invalid authentication |
+| `404` | `not_found` | Resource was not found |
 | `422` | `invalid_ip` | Invalid IP format |
 | `422` | `invalid_url` | Invalid URL format |
 | `422` | `dns_resolution_failed` | Hostname could not be resolved |
-| `422` | `validation_error` | Model validation failed |
+| `422` | `validation_error` | Active Record or signup validation failed |
 | `429` | `quota_exceeded` | Provider quota exceeded |
 | `502` | `provider_error` | Provider returned an unexpected error |
-| `504` | `provider_timeout` | Provider timed out |
+| `504` | `provider_timeout` | Provider request timed out |
+| `500` | `internal_error` | Unexpected server-side failure |
 
 ## Testing
 
@@ -169,13 +327,15 @@ Useful commands:
 ```bash
 bundle exec rspec spec/requests/
 bundle exec rspec spec/lib/geolocation/ipstack_provider_spec.rb
+bundle exec rspec spec/requests/api_docs_spec.rb
 ```
 
 Notes:
 
 - SimpleCov writes coverage output to `coverage/index.html`
 - VCR cassettes are stored in `spec/vcr_cassettes`
-- the successful ipstack flows use VCR; provider error branches use WebMock stubs
+- successful ipstack flows use VCR
+- provider error branches use WebMock stubs
 - test uses `NullProvider` by default unless a spec explicitly instantiates `IpstackProvider`
 
 ## Architecture notes
